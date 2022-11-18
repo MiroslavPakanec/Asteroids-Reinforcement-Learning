@@ -285,8 +285,15 @@ class Asteroid:
         self.points = points # points of convex hull
         self.direction = direction
         self.rotation = random.uniform(0.1, 1) * math.pi / 180
-        self.speed = random.randint(1, 100) * 0.001
+        self.speed = 0.009 # random.randint(1, 100) * 0.0001
         self.level = level
+
+        self.t, self.b, self.l, self.r = False, False, False, False # is translation over edge
+        self.transform_t = lambda p : (p[0], p[1] - SCREEN_Y + 100)
+        self.transformed_points = []
+
+        self.inc_x = (direction[0] - position[0]) * self.speed
+        self.inc_y = (direction[1] - position[1]) * self.speed
 
     def rotate_point(self, center, point, angle):
         new_x = math.cos(angle) * (point[0]-center[0]) - math.sin(angle) * (point[1]-center[1]) + center[0]
@@ -294,15 +301,7 @@ class Asteroid:
         return (new_x, new_y)
 
     def reset(self):
-        points = []
-        for p in self.points:
-            tx = p[0] - self.position[0]
-            ty = p[1] - self.position[1]
-            new_point = (self.original_position[0] + tx, self.original_position[1] + ty) # maintain rotation but respawn at origil pos 
-            points.append(new_point)
-            
-        self.points = points
-        self.position = self.original_position
+        pass
 
     def get_trajectory_percentage(self):
         d_to_origin_x = self.position[0] - self.original_position[0]
@@ -313,32 +312,69 @@ class Asteroid:
         d_total = math.sqrt((d_total_x*d_total_x)+(d_total_y*d_total_y))
         return d_to_origin / d_total
 
+    def translate_asteroid(self, center, points, c_trans_func, p_trans_func):
+        target_points = []        
+        target_center = c_trans_func(center)
+        for p in points:
+            np = p_trans_func(center, p)
+            target_points.append(np)
+        return target_center, target_points
+
+
+    def translate_over_edge(self, center, points):
+        buffer = 100
+        min_x, min_y = 0 - buffer, 0 - buffer
+        max_x, max_y = SCREEN_X + buffer, SCREEN_Y + buffer
+        if (center[1] < min_y):
+            p_trans_func = lambda c, p: (p[0], max_y - (c[1] - p[1]))
+            c_trans_func = lambda c: (c[0], max_y)
+            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
+        if (center[1] > max_y):
+            p_trans_func = lambda c, p: (p[0], min_y - (c[1] - p[1]))
+            c_trans_func = lambda c: (c[0], min_y)
+            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
+        if (center[0] < min_x):
+            p_trans_func = lambda c, p: (max_x - (c[0] - p[0]), p[1])
+            c_trans_func = lambda c: (max_x, c[1])
+            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
+        if (center[0] > max_x):
+            p_trans_func = lambda c, p: (min_x - (c[0] - p[0]), p[1])
+            c_trans_func = lambda c: (min_x, c[1])
+            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
+
+        return center, points
+
     def step(self):
-        x_inc = (self.direction[0] - self.original_position[0]) * self.speed
-        y_inc = (self.direction[1] - self.original_position[1]) * self.speed
+        # x_inc = (self.direction[0] - self.original_position[0]) * self.speed
+        # y_inc = (self.direction[1] - self.original_position[1]) * self.speed
 
-        pygame.draw.line(self.screen, Colors.BLUE, self.position, self.direction)
-        pygame.draw.line(self.screen, Colors.RED, (0, 0), self.position)
-        pygame.draw.line(self.screen, Colors.GREEN, (0, 0), self.direction)
-        pygame.draw.circle(self.screen, Colors.RED, (self.position[0] + x_inc, self.position[1] + y_inc), 5)
-        print(self.get_trajectory_percentage())
+        # pygame.draw.line(self.screen, Colors.BLUE, self.position, self.direction)
+        # pygame.draw.line(self.screen, Colors.RED, (0, 0), self.position)
+        # pygame.draw.line(self.screen, Colors.GREEN, (0, 0), self.direction)
+        # pygame.draw.circle(self.screen, Colors.RED, (self.position[0] + self.inc_x, self.position[1] + self.inc_y), 5)
+        # print(self.get_trajectory_percentage(), end='\r')
 
-        new_x = self.position[0] + x_inc
-        new_y = self.position[1] + y_inc
-        self.position = (new_x, new_y)
+        new_center_point = (self.position[0] + self.inc_x, self.position[1] + self.inc_y)
         new_points = []
         for p in self.points:
-            new_x = p[0]+x_inc
-            new_y = p[1]+y_inc
-            new_rotated = self.rotate_point(center=self.position, point=(new_x, new_y), angle=self.rotation)
-            new_points.append(new_rotated)
+            np = (p[0] + self.inc_x, p[1] + self.inc_y)
+            np = self.rotate_point(center=self.position, point=np, angle=self.rotation)
+            new_points.append(np)
+
+        new_center_point, new_points = self.translate_over_edge(new_center_point, new_points)
+        self.position = new_center_point
+        self.points = new_points
+
+        
+
         self.points = new_points
         return
 
     def render(self):
         pygame.draw.polygon(self.screen, Colors.GREEN, self.points)
-        # pygame.draw.line(screen, Colors.RED, self.original_position, self.direction, 1)
-
+        for i,p in enumerate(self.points):
+            for j, p in enumerate(self.points):
+                pygame.draw.line(self.screen, Colors.RED, self.points[i], self.points[j])
 
 class AsteroidBuilder:
     @staticmethod
@@ -362,12 +398,13 @@ class AsteroidBuilder:
         spawn_dist = math.sqrt(SCREEN_X*SCREEN_X + SCREEN_Y*SCREEN_Y) * 0.2 # spawn / despawn circle
 
         spawn_alpha = random.randint(0, 359)
-        spawn_alpha_rad = spawn_alpha * math.pi / random.randint(140, 220) # spawn angle rad
+        spawn_alpha_rad = spawn_alpha * math.pi / 180 # spawn angle rad
         spawn_circle_center = (SCREEN_X / 2, SCREEN_Y / 2)
         spawn_x = spawn_circle_center[0] + (spawn_dist * math.cos(spawn_alpha_rad))
         spawn_y = spawn_circle_center[1] + (spawn_dist * math.sin(spawn_alpha_rad))
 
-        direction_alpha_rad = (spawn_alpha-random.randint(175, 185)) * math.pi / 180
+        direction_alpha_increment = 180  # random.randint(140, 220)
+        direction_alpha_rad = (spawn_alpha-direction_alpha_increment) * math.pi / 180
         direction_x = spawn_circle_center[0] + (spawn_dist * math.cos(direction_alpha_rad))
         direction_y = spawn_circle_center[1] + (spawn_dist * math.sin(direction_alpha_rad))
 
