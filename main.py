@@ -12,7 +12,7 @@ import random
 from scipy.spatial import ConvexHull, Delaunay
 import numpy as np
 import time
-
+from shapely.geometry import Polygon, Point
 
 SCREEN_X = 1000
 SCREEN_Y = 1000
@@ -23,6 +23,7 @@ class Colors:
     RED = (255,0,0)
     GREEN = (0,255,0)
     BLUE = (0,0,255)
+    YELLOW = (255,255,0)
 
 
 class Projectile:
@@ -39,7 +40,7 @@ class Projectile:
         radar_len = 2000
         x = self.position[0] + math.cos(math.radians(rotation - 90)) * radar_len * -1
         y = self.position[1] + math.sin(math.radians(rotation - 90)) * radar_len
-        # pygame.draw.line(screen, Colors.GREEN, self.position, (x,y), 1)
+        pygame.draw.line(screen, Colors.GREEN, self.position, (x,y), 1)
         return (x,y)
 
     def set_position(self):
@@ -285,7 +286,7 @@ class Asteroid:
         self.points = points # points of convex hull
         self.direction = direction
         self.rotation = random.uniform(0.1, 1) * math.pi / 180
-        self.speed = 0.009 # random.randint(1, 100) * 0.0001
+        self.speed = 0.0001 # random.randint(1, 100) * 0.0001
         self.level = level
 
         self.t, self.b, self.l, self.r = False, False, False, False # is translation over edge
@@ -295,22 +296,19 @@ class Asteroid:
         self.inc_x = (direction[0] - position[0]) * self.speed
         self.inc_y = (direction[1] - position[1]) * self.speed
 
+        #temp
+        self.H = (0,0)
+        self.O = (0,0)
+        self.C = (0,0)
+
     def rotate_point(self, center, point, angle):
         new_x = math.cos(angle) * (point[0]-center[0]) - math.sin(angle) * (point[1]-center[1]) + center[0]
         new_y = math.sin(angle) * (point[0]-center[0]) + math.cos(angle) * (point[1]-center[1]) + center[1]
         return (new_x, new_y)
 
-    def reset(self):
-        pass
-
-    def get_trajectory_percentage(self):
-        d_to_origin_x = self.position[0] - self.original_position[0]
-        d_to_origin_y = self.position[1] - self.original_position[1]
-        d_total_x = self.original_position[0] - self.direction[0]
-        d_total_y = self.original_position[1] - self.direction[1]
-        d_to_origin = math.sqrt((d_to_origin_x*d_to_origin_x)+(d_to_origin_y*d_to_origin_y))
-        d_total = math.sqrt((d_total_x*d_total_x)+(d_total_y*d_total_y))
-        return d_to_origin / d_total
+    def get_center_of_mass(self):
+        P = Polygon(self.points)
+        return P.centroid.coords[0]
 
     def translate_asteroid(self, center, points, c_trans_func, p_trans_func):
         target_points = []        
@@ -345,15 +343,6 @@ class Asteroid:
         return center, points
 
     def step(self):
-        # x_inc = (self.direction[0] - self.original_position[0]) * self.speed
-        # y_inc = (self.direction[1] - self.original_position[1]) * self.speed
-
-        # pygame.draw.line(self.screen, Colors.BLUE, self.position, self.direction)
-        # pygame.draw.line(self.screen, Colors.RED, (0, 0), self.position)
-        # pygame.draw.line(self.screen, Colors.GREEN, (0, 0), self.direction)
-        # pygame.draw.circle(self.screen, Colors.RED, (self.position[0] + self.inc_x, self.position[1] + self.inc_y), 5)
-        # print(self.get_trajectory_percentage(), end='\r')
-
         new_center_point = (self.position[0] + self.inc_x, self.position[1] + self.inc_y)
         new_points = []
         for p in self.points:
@@ -365,10 +354,46 @@ class Asteroid:
         self.position = new_center_point
         self.points = new_points
 
-        
 
-        self.points = new_points
-        return
+    def generate_hit_point(self):
+        p1 = self.points[self.hit_vertex_idx-1]
+        p2 = self.points[self.hit_vertex_idx]
+        u = self.hit_point_percent
+        x = (1-u)*p1[0] + u*p2[0]
+        y = (1-u)*p1[1] + u*p2[1]
+        return (x,y)
+
+    def hit(self, hit_point, hit_direction):
+        # compute Center C, hit point H and projectile origin O
+        Hx, Hy = hit_point
+        Dx, Dy = hit_direction
+        dist_x, dist_y = (Hx-Dx) * 0.1, (Hy-Dy) * 0.1
+        Ox, Oy = Hx+dist_x, Hy+dist_y
+        Cx, Cy = self.get_center_of_mass()
+        self.O, self.H, self.C = (Ox, Oy), (Hx, Hy), (Cx, Cy)
+        d = (Hx - Cx, Hy - Cy)
+        h = (Hx - Ox, Hy - Oy)
+
+        # compute hit angle alha (direct hit adds no rotation, side hit rotates more)
+        alpha = math.acos((d[0]*h[0]+d[1]*h[1])/(math.sqrt(d[0]*d[0]+d[1]*d[1])*math.sqrt(h[0]*h[0]+h[1]*h[1])))
+        alpha_deg = alpha*180/math.pi
+        hit_angle_factor = alpha_deg / 90 if alpha_deg <= 90 else abs(alpha_deg - 180) / 90
+        
+        # compute alhpa orientation - rotation clockwise and anti clockwise
+        orientation = (Hy - Oy)*(Cx - Hx) - (Cy - Hy)*(Hx - Ox)
+        hit_orientation_fac = -1 if (orientation > 0) else 0 if orientation == 0 else 1
+
+        # compute distance from center of mass (linear with rotation increment)
+        dist_from_center_of_mass = math.sqrt(d[0]*d[0]+d[1]*d[1])
+        
+        R = dist_from_center_of_mass * hit_angle_factor * hit_orientation_fac * 0.0001
+        self.rotation += R
+
+        # push 
+        push_x, push_y = d[0] * 0.01, d[1] * 0.01
+        self.inc_x -= push_x 
+        self.inc_y -= push_y
+
 
     def render(self):
         pygame.draw.polygon(self.screen, Colors.GREEN, self.points)
@@ -388,9 +413,6 @@ class AsteroidBuilder:
             corners.append((p[0], p[1]))
         return Asteroid(screen, position, corners, direction, level=size/10)
 
-
-    # @staticmethod
-    # generate_asteroid_point(size: int, )
 
     @staticmethod
     def generate_asteroid_points(size: int):
@@ -438,8 +460,6 @@ class AsteroidController:
         current_time = pygame.time.get_ticks()
         for ai,asteroid in enumerate(self.asteroids):
             asteroid.step()
-            if asteroid.get_trajectory_percentage() >= 1:
-                asteroid.reset()
         
         if current_time < self.last_respawn_time + self.respawn_freq_ms or len(self.asteroids) >= self.limit:
             return
@@ -457,24 +477,27 @@ class ColisionDetector:
     @staticmethod
     def asteroid_projectile(ac: AsteroidController, ship: SpaceShip):
         for ai,asteroid in enumerate(ac.asteroids):
+            polygon = Polygon(asteroid.points)
             for pi, projectile in enumerate(ship.projectiles):
-                if ColisionDetector.is_inside_polygon(asteroid.points, projectile.position):
+                projectile_point = Point(projectile.position[0],projectile.position[1])
+                if polygon.contains(projectile_point):
                     ship.projectiles.pop(pi)
-                    ac.hit(ai, asteroid)
+                    # ac.hit(ai, asteroid)
+                    asteroid.hit(projectile.position, projectile.direction)
     
-    @staticmethod
-    def is_inside_polygon(vertices, point):
-        orientation_left = None
-        for i,_ in enumerate(vertices):
-            if i == 0:
-                continue
-            left: bool = ColisionDetector.isLeft(vertices[i-1], vertices[i], point)
-            if orientation_left is None:
-                orientation_left = left
-                continue
-            if orientation_left != left:
-                return False
-        return True
+    # @staticmethod
+    # def is_inside_polygon(vertices, point):
+    #     orientation_left = None
+    #     for i,_ in enumerate(vertices):
+    #         if i == 0:
+    #             continue
+    #         left: bool = ColisionDetector.isLeft(vertices[i-1], vertices[i], point)
+    #         if orientation_left is None:
+    #             orientation_left = left
+    #             continue
+    #         if orientation_left != left:
+    #             return False
+    #     return True
     
     @staticmethod
     def isLeft(a, b, c):
