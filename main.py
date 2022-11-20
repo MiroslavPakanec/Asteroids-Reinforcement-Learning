@@ -279,15 +279,16 @@ def build_space_ship(screen):
     )
 
 class Asteroid:
-    def __init__(self, screen, position, points, direction, level):
+    def __init__(self, screen, position, points, direction, speed, level):
         self.screen = screen
         self.position = position
         self.original_position = position
         self.points = points # points of convex hull
         self.direction = direction
         self.rotation = random.uniform(0.1, 1) * math.pi / 180
-        self.speed = 0.0001 # random.randint(1, 100) * 0.0001
+        self.speed = speed # 0.01 # random.randint(1, 100) * 0.0001 
         self.level = level
+        self.health = self.level * self.level
 
         self.t, self.b, self.l, self.r = False, False, False, False # is translation over edge
         self.transform_t = lambda p : (p[0], p[1] - SCREEN_Y + 100)
@@ -295,11 +296,6 @@ class Asteroid:
 
         self.inc_x = (direction[0] - position[0]) * self.speed
         self.inc_y = (direction[1] - position[1]) * self.speed
-
-        #temp
-        self.H = (0,0)
-        self.O = (0,0)
-        self.C = (0,0)
 
     def rotate_point(self, center, point, angle):
         new_x = math.cos(angle) * (point[0]-center[0]) - math.sin(angle) * (point[1]-center[1]) + center[0]
@@ -320,7 +316,7 @@ class Asteroid:
 
 
     def translate_over_edge(self, center, points):
-        buffer = 100
+        buffer = 50
         min_x, min_y = 0 - buffer, 0 - buffer
         max_x, max_y = SCREEN_X + buffer, SCREEN_Y + buffer
         if (center[1] < min_y):
@@ -355,22 +351,35 @@ class Asteroid:
         self.points = new_points
 
 
-    def generate_hit_point(self):
-        p1 = self.points[self.hit_vertex_idx-1]
-        p2 = self.points[self.hit_vertex_idx]
-        u = self.hit_point_percent
-        x = (1-u)*p1[0] + u*p2[0]
-        y = (1-u)*p1[1] + u*p2[1]
-        return (x,y)
+    def hit(self):
+        self.health -= 1
+        if self.health <= 0:
+            return True
+        return False
 
-    def hit(self, hit_point, hit_direction):
+    def split(self, hit_point):
+        new_direction_x = self.inc_x / self.speed + self.position[0]
+        new_direction_y = self.inc_y / self.speed + self.position[1] 
+
+        alpha = 20 * math.pi / 180
+        beta = -20 * math.pi / 180
+        directionA_x = new_direction_x * math.cos(alpha) - new_direction_y * math.sin(alpha)
+        directionA_y = new_direction_x * math.sin(alpha) + new_direction_y * math.cos(alpha)
+        
+        directionB_x = new_direction_x * math.cos(beta) - new_direction_y * math.sin(beta)
+        directionB_y = new_direction_x * math.sin(beta) + new_direction_y * math.cos(beta)
+
+        return self.position, (directionA_x, directionA_y), (directionB_x, directionB_y), self.speed, self.level - 1
+
+        
+
+    def move_on_hit(self, hit_point, hit_direction):
         # compute Center C, hit point H and projectile origin O
         Hx, Hy = hit_point
         Dx, Dy = hit_direction
         dist_x, dist_y = (Hx-Dx) * 0.1, (Hy-Dy) * 0.1
         Ox, Oy = Hx+dist_x, Hy+dist_y
         Cx, Cy = self.get_center_of_mass()
-        self.O, self.H, self.C = (Ox, Oy), (Hx, Hy), (Cx, Cy)
         d = (Hx - Cx, Hy - Cy)
         h = (Hx - Ox, Hy - Oy)
 
@@ -386,11 +395,12 @@ class Asteroid:
         # compute distance from center of mass (linear with rotation increment)
         dist_from_center_of_mass = math.sqrt(d[0]*d[0]+d[1]*d[1])
         
-        R = dist_from_center_of_mass * hit_angle_factor * hit_orientation_fac * 0.0001
+        R = dist_from_center_of_mass * hit_angle_factor * hit_orientation_fac * 0.001 / (self.level * 10)
         self.rotation += R
 
         # push 
-        push_x, push_y = d[0] * 0.01, d[1] * 0.01
+        level_push_fac = (self.level * self.level)
+        push_x, push_y = d[0] * 0.1 / level_push_fac , d[1] * 0.1 / level_push_fac
         self.inc_x -= push_x 
         self.inc_y -= push_y
 
@@ -401,53 +411,60 @@ class Asteroid:
             for j, p in enumerate(self.points):
                 pygame.draw.line(self.screen, Colors.RED, self.points[i], self.points[j])
 
+
 class AsteroidBuilder:
     @staticmethod
-    def generate_asteroid(screen):
-        size = 50 #random.randint(5, 100)
-        points, position, direction = np.array(AsteroidBuilder.generate_asteroid_points(size))
+    def generate_asteroid(screen, level: int, position=None, direction=None, speed=None):
+        size = level * 10
+        points, position, direction = np.array(AsteroidBuilder.generate_asteroid_points(size, position, direction))
         hull = ConvexHull(points)
         corners = []
         for v in hull.vertices:
             p = points[v]
             corners.append((p[0], p[1]))
-        return Asteroid(screen, position, corners, direction, level=size/10)
+        if (speed is None):
+            speed = random.randint(1, 100) * 0.00001 
+        return Asteroid(screen, position, corners, direction, speed, level)
 
 
     @staticmethod
-    def generate_asteroid_points(size: int):
+    def generate_asteroid_points(size: int, position=None, direction=None):
         n = size
-        spawn_dist = math.sqrt(SCREEN_X*SCREEN_X + SCREEN_Y*SCREEN_Y) * 0.2 # spawn / despawn circle
+        spawn_dist = math.sqrt(SCREEN_X*SCREEN_X + SCREEN_Y*SCREEN_Y) * 0.7 # spawn / despawn circle
 
-        spawn_alpha = random.randint(0, 359)
-        spawn_alpha_rad = spawn_alpha * math.pi / 180 # spawn angle rad
-        spawn_circle_center = (SCREEN_X / 2, SCREEN_Y / 2)
-        spawn_x = spawn_circle_center[0] + (spawn_dist * math.cos(spawn_alpha_rad))
-        spawn_y = spawn_circle_center[1] + (spawn_dist * math.sin(spawn_alpha_rad))
+        if position is None:
+            spawn_alpha = random.randint(0, 359)
+            spawn_alpha_rad = spawn_alpha * math.pi / 180 # spawn angle rad
+            spawn_circle_center = (SCREEN_X / 2, SCREEN_Y / 2)
+            spawn_x = spawn_circle_center[0] + (spawn_dist * math.cos(spawn_alpha_rad))
+            spawn_y = spawn_circle_center[1] + (spawn_dist * math.sin(spawn_alpha_rad))
+            position = (spawn_x,spawn_y)
 
-        direction_alpha_increment = 180  # random.randint(140, 220)
-        direction_alpha_rad = (spawn_alpha-direction_alpha_increment) * math.pi / 180
-        direction_x = spawn_circle_center[0] + (spawn_dist * math.cos(direction_alpha_rad))
-        direction_y = spawn_circle_center[1] + (spawn_dist * math.sin(direction_alpha_rad))
+        if direction is None:
+            direction_alpha_increment = 180  # random.randint(140, 220)
+            direction_alpha_rad = (spawn_alpha-direction_alpha_increment) * math.pi / 180
+            direction_x = spawn_circle_center[0] + (spawn_dist * math.cos(direction_alpha_rad))
+            direction_y = spawn_circle_center[1] + (spawn_dist * math.sin(direction_alpha_rad))
+            direction = (direction_x, direction_y)
 
         P = []
         orbits = np.random.normal(size/5, size, n)
         for o in orbits:
             alpha = random.randint(0, 359)
             alpha_rad = alpha * math.pi / 180
-            px = round(spawn_x - (o * math.cos(alpha_rad)))
-            py = round(spawn_y - (o * math.sin(alpha_rad)))
+            px = round(position[0] - (o * math.cos(alpha_rad)))
+            py = round(position[1] - (o * math.sin(alpha_rad)))
             P.append((px, py))
-        return P, (spawn_x, spawn_y), (direction_x, direction_y)
+        return P, position, direction
 
 class AsteroidController:
     def __init__(self, screen):
         self.screen = screen
         self.asteroids: List[Asteroid] = []
-        self.respawn_freq_ms = 2000
+        self.respawn_freq_ms = 4000
         self.last_respawn_time = 0
         self.cleanup_count = 0
-        self.limit = 1
+        self.limit = 20
 
     def hit(self, asteroid_idx: int, asteroid: Asteroid):
         self.asteroids.pop(asteroid_idx)
@@ -465,15 +482,25 @@ class AsteroidController:
             return
         
         self.last_respawn_time = current_time
-        new_asteroid: Asteroid = AsteroidBuilder.generate_asteroid(self.screen)
-        self.asteroids.append(new_asteroid)
+        new_asteroid_level = random.randint(1,5)
+        self.generate_asteroid(new_asteroid_level)
 
+    def generate_asteroid(self, level, position=None, direction=None, speed=None):
+        new_asteroid: Asteroid = AsteroidBuilder.generate_asteroid(self.screen, level, position, direction, speed)
+        self.asteroids.append(new_asteroid)
 
     def render(self):
         for asteroid in self.asteroids:
             asteroid.render()
 
 class ColisionDetector:
+
+    # @staticmethod
+    # def asteroid_ship(ac: AsteroidController, ship: SpaceShip):
+    #     for ai,asteroid in enumerate(ac.asteroids):
+    #         polygon = Polygon(asteroid.points)
+            
+
     @staticmethod
     def asteroid_projectile(ac: AsteroidController, ship: SpaceShip):
         for ai,asteroid in enumerate(ac.asteroids):
@@ -482,27 +509,18 @@ class ColisionDetector:
                 projectile_point = Point(projectile.position[0],projectile.position[1])
                 if polygon.contains(projectile_point):
                     ship.projectiles.pop(pi)
-                    # ac.hit(ai, asteroid)
-                    asteroid.hit(projectile.position, projectile.direction)
+                    
+                    destroyed = asteroid.hit()
+                    if not destroyed:
+                        asteroid.move_on_hit(projectile.position, projectile.direction)
+                    else:
+                        position, dir_A, dir_B, speed, level = asteroid.split(projectile.position)
+                        ac.asteroids.pop(ai)
+                        if (level <= 0):
+                            continue
+                        ac.generate_asteroid(level, position, dir_A, speed)
+                        ac.generate_asteroid(level, position, dir_B, speed)
     
-    # @staticmethod
-    # def is_inside_polygon(vertices, point):
-    #     orientation_left = None
-    #     for i,_ in enumerate(vertices):
-    #         if i == 0:
-    #             continue
-    #         left: bool = ColisionDetector.isLeft(vertices[i-1], vertices[i], point)
-    #         if orientation_left is None:
-    #             orientation_left = left
-    #             continue
-    #         if orientation_left != left:
-    #             return False
-    #     return True
-    
-    @staticmethod
-    def isLeft(a, b, c):
-     return ((b[0] - a[0])*(c[1] - a[1]) - (b[1] - a[1])*(c[0] - a[0])) > 0
-
 
 def main(screen):
     try:
