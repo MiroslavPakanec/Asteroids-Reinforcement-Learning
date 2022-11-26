@@ -2,8 +2,8 @@ import pygame
 import traceback
 
 from colors import Colors
-from game_objects.ship import SpaceShip
-from builders.ship_builder import ShipBuilder
+from game_objects.new_ship import SpaceShip
+# from builders.ship_builder import ShipBuilder
 from controllers.asteroid_controller import AsteroidController
 from controllers.colision_controller import ColisionController
 
@@ -30,7 +30,8 @@ def handle_exit_events():
 def main(screen):
     clock = pygame.time.Clock()
     try:
-        ship: SpaceShip = ShipBuilder.build_space_ship(screen)
+        # ship: SpaceShip = ShipBuilder.build_space_ship(screen)
+        ship: SpaceShip = SpaceShip(screen, (SCREEN_X/2, SCREEN_Y/2))
         asteroid_controller = AsteroidController(screen)
 
         while True:
@@ -41,6 +42,7 @@ def main(screen):
             asteroid_controller.step()
 
             ColisionController.check_asteroid_projectile(asteroid_controller, ship)
+            ColisionController.check_asteroid_ship(asteroid_controller, ship)
 
             ship.render()
             asteroid_controller.render()

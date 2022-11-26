@@ -1,13 +1,17 @@
 from shapely.geometry import Polygon, Point
-from game_objects.ship import SpaceShip
+from game_objects.new_ship import SpaceShip
 from controllers.asteroid_controller import AsteroidController
 
 class ColisionController:
 
-    # @staticmethod
-    # def asteroid_ship(ac: AsteroidController, ship: SpaceShip):
-    #     for ai,asteroid in enumerate(ac.asteroids):
-    #         polygon = Polygon(asteroid.points)
+    @staticmethod
+    def check_asteroid_ship(ac: AsteroidController, ship: SpaceShip):
+        for ai,asteroid in enumerate(ac.asteroids):
+            polygon_asteroid = Polygon(asteroid.points)
+            polygon_ship = Polygon(ship.skeleton_points)
+            if (polygon_asteroid.intersects(polygon_ship)):
+                raise Exception('GAME OVER')
+
             
 
     @staticmethod
@@ -21,7 +25,7 @@ class ColisionController:
                     
                     destroyed = asteroid.hit()
                     if not destroyed:
-                        asteroid.move_on_hit(projectile.position, projectile.get_direction_vector())
+                        asteroid.move_on_hit(projectile.position, projectile.direction)
                     else:
                         position, dir_A, dir_B, speed, level = asteroid.split()
                         ac.asteroids.pop(ai)

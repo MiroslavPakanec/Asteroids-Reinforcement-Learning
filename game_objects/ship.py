@@ -128,13 +128,24 @@ class SpaceShip:
         right_py = cy + (d_cp * math.sin(alpha_rad))
         return [(left_px, left_py), (right_px, right_py)]
 
+    def get_dist(self, ax, ay, bx, by):
+        dx = ax - bx
+        dy = ay - by
+        return math.sqrt(dx * dx + dy * dy) 
+
+
+    def get_collision_points(self):
+        points = self.get_pixel_points()
+        return points
+
+
     def set_shooting(self):
         keys = pygame.key.get_pressed()
         current_time = pygame.time.get_ticks()
         if keys[pygame.K_LCTRL] and current_time > self.last_shooting_time + self.shooting_freq:
             self.last_shooting_time = current_time
             pygame.draw.circle(self.screen, Colors.BLUE, self.position, 1)
-            left_p, right_p = self.get_projectile_points(20, 17)
+            left_p, right_p = self.get_projectile_points(22, 17)
             projectile_left = Projectile(self.screen, left_p, self.rotation)
             projectile_right = Projectile(self.screen, right_p, self.rotation)
             self.projectiles.append(projectile_left)
@@ -168,3 +179,7 @@ class SpaceShip:
         
         for projectile in self.projectiles:
             projectile.render()
+
+        collision_points = self.get_collision_points()
+        for p in collision_points:           
+            pygame.draw.circle(self.screen, Colors.GREEN, p, 3)
