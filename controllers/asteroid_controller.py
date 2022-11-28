@@ -5,13 +5,16 @@ from game_objects.asteroid import Asteroid
 from builders.asteroid_builder import AsteroidBuilder
 
 class AsteroidController:
-    def __init__(self, screen):
+    def __init__(self, screen, config):
+        self.init_config(config)
         self.screen = screen
+        self.config = config
         self.asteroids: List[Asteroid] = []
-        self.respawn_freq_ms = 4000
         self.last_respawn_time = 0
-        self.cleanup_count = 0
-        self.limit = 20
+
+    def init_config(self, config):
+        self.respawn_freq_ms = config['asteroid']['respawn_frequency_ms']
+        self.limit = config['asteroid']['limit']
 
     def hit(self, asteroid_idx: int, asteroid: Asteroid):
         self.asteroids.pop(asteroid_idx)
@@ -33,7 +36,7 @@ class AsteroidController:
         self.generate_asteroid(new_asteroid_level)
 
     def generate_asteroid(self, level, position=None, direction=None, speed=None):
-        new_asteroid: Asteroid = AsteroidBuilder.generate_asteroid(self.screen, level, position, direction, speed)
+        new_asteroid: Asteroid = AsteroidBuilder.generate_asteroid(self.screen, self.config, level, position, direction, speed)
         self.asteroids.append(new_asteroid)
 
     def render(self):

@@ -1,9 +1,9 @@
+import json
 import pygame
 import traceback
 
 from colors import Colors
-from game_objects.new_ship import SpaceShip
-# from builders.ship_builder import ShipBuilder
+from game_objects.ship import SpaceShip
 from controllers.asteroid_controller import AsteroidController
 from controllers.colision_controller import ColisionController
 
@@ -18,6 +18,12 @@ def initialize():
     screen = pygame.display.set_mode((SCREEN_X, SCREEN_Y))
     return screen
 
+def load_config():
+    path = './config.json'
+    with open(path, 'r') as f:
+        data = json.load(f)
+    return data
+
 def handle_exit_events():
     for event in pygame.event.get():
         if event.type == 256:
@@ -29,10 +35,10 @@ def handle_exit_events():
 
 def main(screen):
     clock = pygame.time.Clock()
+    config = load_config()
     try:
-        # ship: SpaceShip = ShipBuilder.build_space_ship(screen)
-        ship: SpaceShip = SpaceShip(screen, (SCREEN_X/2, SCREEN_Y/2))
-        asteroid_controller = AsteroidController(screen)
+        ship: SpaceShip = SpaceShip(screen, config)
+        asteroid_controller = AsteroidController(screen, config)
 
         while True:
             handle_exit_events()

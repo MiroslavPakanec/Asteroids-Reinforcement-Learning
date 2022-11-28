@@ -1,5 +1,5 @@
 from shapely.geometry import Polygon, Point
-from game_objects.new_ship import SpaceShip
+from game_objects.ship import SpaceShip
 from controllers.asteroid_controller import AsteroidController
 
 class ColisionController:
@@ -13,7 +13,6 @@ class ColisionController:
                 raise Exception('GAME OVER')
 
             
-
     @staticmethod
     def check_asteroid_projectile(ac: AsteroidController, ship: SpaceShip):
         for ai,asteroid in enumerate(ac.asteroids):

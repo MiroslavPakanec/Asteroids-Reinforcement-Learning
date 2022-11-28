@@ -3,28 +3,30 @@ import math
 from shapely.geometry import Polygon
 import pygame
 from colors import Colors
-
-SCREEN_X = 1000
-SCREEN_Y = 1000
+from window import Window
 
 class Asteroid:
-    def __init__(self, screen, position, points, direction, speed, level):
+    def __init__(self, screen, config, position, points, direction, speed, level):
+        self.init_config(config)
         self.screen = screen
         self.position = position
         self.original_position = position
-        self.points = points # points of convex hull
+        self.points = points
         self.direction = direction
-        self.rotation = random.uniform(0.1, 1) * math.pi / 180
-        self.speed = speed # 0.01 # random.randint(1, 100) * 0.0001 
+        
+        self.speed = speed
         self.level = level
         self.health = self.level * self.level
 
-        self.t, self.b, self.l, self.r = False, False, False, False # is translation over edge
-        self.transform_t = lambda p : (p[0], p[1] - SCREEN_Y + 100)
-        self.transformed_points = []
-
         self.inc_x = (direction[0] - position[0]) * self.speed
         self.inc_y = (direction[1] - position[1]) * self.speed
+
+    def init_config(self, config):
+        min_rot = config['asteroid']['min_rotation_radians']
+        max_rot = config['asteroid']['max_rotation_radians']
+        self.rotation = random.uniform(min_rot, max_rot) * math.pi / 180
+        self.missile_push_factor = config['asteroid']['missile_push_factor']
+        self.missile_rotation_factor = config['asteroid']['missile_rotation_factor']
 
     def rotate_point(self, center, point, angle):
         new_x = math.cos(angle) * (point[0]-center[0]) - math.sin(angle) * (point[1]-center[1]) + center[0]
@@ -35,38 +37,6 @@ class Asteroid:
         P = Polygon(self.points)
         return P.centroid.coords[0]
 
-    def translate_asteroid(self, center, points, c_trans_func, p_trans_func):
-        target_points = []        
-        target_center = c_trans_func(center)
-        for p in points:
-            np = p_trans_func(center, p)
-            target_points.append(np)
-        return target_center, target_points
-
-
-    def translate_over_edge(self, center, points):
-        buffer = 50
-        min_x, min_y = 0 - buffer, 0 - buffer
-        max_x, max_y = SCREEN_X + buffer, SCREEN_Y + buffer
-        if (center[1] < min_y):
-            p_trans_func = lambda c, p: (p[0], max_y - (c[1] - p[1]))
-            c_trans_func = lambda c: (c[0], max_y)
-            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
-        if (center[1] > max_y):
-            p_trans_func = lambda c, p: (p[0], min_y - (c[1] - p[1]))
-            c_trans_func = lambda c: (c[0], min_y)
-            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
-        if (center[0] < min_x):
-            p_trans_func = lambda c, p: (max_x - (c[0] - p[0]), p[1])
-            c_trans_func = lambda c: (max_x, c[1])
-            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
-        if (center[0] > max_x):
-            p_trans_func = lambda c, p: (min_x - (c[0] - p[0]), p[1])
-            c_trans_func = lambda c: (min_x, c[1])
-            return self.translate_asteroid(center, points, c_trans_func, p_trans_func)
-
-        return center, points
-
     def step(self):
         new_center_point = (self.position[0] + self.inc_x, self.position[1] + self.inc_y)
         new_points = []
@@ -75,9 +45,9 @@ class Asteroid:
             np = self.rotate_point(center=self.position, point=np, angle=self.rotation)
             new_points.append(np)
 
-        new_center_point, new_points = self.translate_over_edge(new_center_point, new_points)
+        new_center_point, new_points_lst = Window.translate_over_edge(new_center_point, [new_points], buffer=50)
         self.position = new_center_point
-        self.points = new_points
+        self.points = new_points_lst[0]
 
 
     def hit(self):
@@ -101,7 +71,6 @@ class Asteroid:
         return self.position, (directionA_x, directionA_y), (directionB_x, directionB_y), self.speed, self.level - 1
 
         
-
     def move_on_hit(self, hit_point, hit_direction):
         # compute Center C, hit point H and projectile origin O
         Hx, Hy = hit_point
@@ -124,12 +93,12 @@ class Asteroid:
         # compute distance from center of mass (linear with rotation increment)
         dist_from_center_of_mass = math.sqrt(d[0]*d[0]+d[1]*d[1])
         
-        R = dist_from_center_of_mass * hit_angle_factor * hit_orientation_fac * 0.001 / (self.level * 10)
+        R = dist_from_center_of_mass * hit_angle_factor * hit_orientation_fac * self.missile_rotation_factor / (self.level * self.level)
         self.rotation += R
 
         # push 
         level_push_fac = (self.level * self.level)
-        push_x, push_y = d[0] * 0.1 / level_push_fac , d[1] * 0.1 / level_push_fac
+        push_x, push_y = d[0] * self.missile_push_factor / level_push_fac , d[1] * self.missile_push_factor / level_push_fac
         self.inc_x -= push_x 
         self.inc_y -= push_y
 

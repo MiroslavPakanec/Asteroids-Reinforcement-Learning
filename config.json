@@ -1,0 +1,34 @@
+{
+    "screen": {
+        "x": 1000,
+        "y": 1000
+    },
+    "ship": {
+        "x": 40,
+        "y": 40,
+        "spawn_x": 500,
+        "spawn_y": 500,
+        "rotation_factor": 3,
+        "speed_factor": 0.06,
+        "speed_factor_boost": 0.24,
+        "speed_particle_renders": 10,
+        "speed_particle_renders_boost": 20,
+        "speed_particle_spread_degrees": 30,
+        "speed_particle_spread_degrees_boost": 10,
+        "shooting_frequiency": 125
+    },
+    "asteroid": {
+        "min_rotation_radians": 0.1,
+        "max_rotation_radians": 1,
+        "min_random_speed_factor": 1,
+        "max_random_speed_factor": 100,
+        "speed_factor": 0.00001,
+        "missile_push_factor": 0.1,
+        "missile_rotation_factor": 0.001,
+        "limit": 20,
+        "respawn_frequency_ms": 4000
+    },
+    "projectile": {
+        "speed_factor": 1 
+    }
+}
