@@ -7,15 +7,15 @@ from game_objects.ship import SpaceShip
 from controllers.asteroid_controller import AsteroidController
 from controllers.colision_controller import ColisionController
 
-SCREEN_X = 1000
-SCREEN_Y = 1000
 FPS = 60
 
 
-def initialize():
+def initialize(config):
     pygame.init()
     pygame.display.set_caption('MP Ateroids')
-    screen = pygame.display.set_mode((SCREEN_X, SCREEN_Y))
+    screen_x = config['screen']['x']
+    screen_y = config['screen']['y']
+    screen = pygame.display.set_mode((screen_x, screen_y))
     return screen
 
 def load_config():
@@ -31,27 +31,49 @@ def handle_exit_events():
     keys = pygame.key.get_pressed()
     if keys[pygame.K_ESCAPE]:
         raise Exception('Game exit.')
-  
 
-def main(screen):
-    clock = pygame.time.Clock()
+def handle_reset_event(score: int, last_score: int, ticks: int, ship: SpaceShip, asteroid_controller: AsteroidController, hit: bool):
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_p] or ticks == 0 or hit:
+        config = load_config()
+        ship.reset(config)
+        asteroid_controller.reset(config)
+        return 0, score, 0
+    return score, last_score, ticks
+
+
+def main():
     config = load_config()
+    screen = initialize(config)   
+    clock = pygame.time.Clock()
+    font = pygame.freetype.Font('./fonts/atari.ttf', 15)
+    ticks = 0
+    score = 0
+    last_score = 0
+    hit = False
+    
     try:
-        ship: SpaceShip = SpaceShip(screen, config)
-        asteroid_controller = AsteroidController(screen, config)
+        ship: SpaceShip = SpaceShip(screen)
+        asteroid_controller = AsteroidController(screen)
 
         while True:
-            handle_exit_events()
             screen.fill(Colors.BACKGROUND)
+            
+            handle_exit_events()
+            score, last_score, ticks = handle_reset_event(score, last_score, ticks, ship, asteroid_controller, hit)
 
             ship.step()
             asteroid_controller.step()
+            ticks += 1
 
-            ColisionController.check_asteroid_projectile(asteroid_controller, ship)
-            ColisionController.check_asteroid_ship(asteroid_controller, ship)
+            score += ColisionController.check_asteroid_projectile(asteroid_controller, ship)
+            hit = ColisionController.check_asteroid_ship(asteroid_controller, ship)
 
             ship.render()
             asteroid_controller.render()
+            font.render_to(screen, (10, 10), f'Score: {score}', Colors.PINK)
+            font.render_to(screen, (10, 30), f'Last Score: {last_score}', Colors.PINK)
+            font.render_to(screen, (10, 50), f'Ticks: {ticks}', Colors.PINK)
 
             pygame.display.flip()
             clock.tick(FPS)
@@ -64,5 +86,4 @@ def main(screen):
     
 
 if __name__ == '__main__':
-    screen = initialize()   
-    main(screen)
+    main()

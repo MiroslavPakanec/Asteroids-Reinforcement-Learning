@@ -26,7 +26,7 @@
         "missile_push_factor": 0.1,
         "missile_rotation_factor": 0.001,
         "limit": 20,
-        "respawn_frequency_ms": 4000
+        "respawn_frequency_ms": 5000
     },
     "projectile": {
         "speed_factor": 1 

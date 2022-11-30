@@ -10,6 +10,12 @@ class Projectile:
         self.direction = direction
         self.speed = config['projectile']['speed_factor']
 
+    def step(self):
+        self.position = self.inc_position()
+
+    def render(self):
+        pygame.draw.line(self.screen, Colors.RED, self.position, self.inc_position())
+
     def inc_position(self):
         x = self.position[0] + self.direction[0] * self.speed
         y = self.position[1] + self.direction[1] * self.speed
@@ -17,9 +23,3 @@ class Projectile:
 
     def get_position(self):
         return self.inc_position()
-
-    def step(self):
-        self.position = self.inc_position()
-
-    def render(self):
-        pygame.draw.line(self.screen, Colors.RED, self.position, self.inc_position())

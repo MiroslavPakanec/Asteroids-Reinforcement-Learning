@@ -13,10 +13,25 @@ MIN_BOOST_ACCELERATION_TIME = 15
 
 
 class SpaceShip:
-    def __init__(self, screen, config):
-        print(config)
-        self.init_config(config)
+    def __init__(self, screen):
         self.screen = screen
+
+    def step(self):
+        self.set_boost()
+        self.set_rotation()
+        self.set_direction()
+        self.set_position()
+        self.set_shooting()
+        self.rotate_ship()
+        self.set_particles()
+        for i,projectile in enumerate(self.projectiles):
+            if (Window.is_point_off_window(projectile.position, self.screen_x, self.screen_y)):
+                self.projectiles.pop(i)
+            else:
+                projectile.step()
+
+    def reset(self, config):
+        self.init_config(config)
         self.direction = 0, 0
         self.rotation = 0
         self.total_rotation = self.rotation
@@ -30,7 +45,21 @@ class SpaceShip:
         self.last_shooting_time = 0
         self.projectiles: List[Projectile] = []
 
+    def render(self):
+        pygame.draw.line(self.screen, Colors.YELLOW, self.skeleton_points[0], self.skeleton_points[-1], width=2)
+        for i, _ in enumerate(self.skeleton_points):
+            if i == 0:
+                continue
+            pygame.draw.line(self.screen, Colors.YELLOW, self.skeleton_points[i], self.skeleton_points[i-1], width=2)
+        for i, p in enumerate(self.particles):
+            pygame.draw.circle(self.screen, self.particle_colors[i], p, 1)
+        for projectile in self.projectiles:
+            projectile.render()
+
     def init_config(self, config):
+        self.screen_x = config['screen']['x']
+        self.screen_y = config['screen']['y']
+
         self.w = config['ship']['x']
         self.h = config['ship']['y']
         self.rotation_factor = config['ship']['rotation_factor']
@@ -201,31 +230,3 @@ class SpaceShip:
         self.position = new_c
         self.skeleton_points = new_point_lists[0]
         self.misile_points = new_point_lists[1]
-
-
-    def step(self):
-        self.set_boost()
-        self.set_rotation()
-        self.set_direction()
-        self.set_position()
-        self.set_shooting()
-        self.rotate_ship()
-        self.set_particles()
-        for i,projectile in enumerate(self.projectiles):
-            if (Window.is_point_off_window(projectile.position, SCREEN_X, SCREEN_Y)):
-                self.projectiles.pop(i)
-            else:
-                projectile.step()
-
-    def render(self):
-        pygame.draw.line(self.screen, Colors.YELLOW, self.skeleton_points[0], self.skeleton_points[-1], width=2)
-        for i, _ in enumerate(self.skeleton_points):
-            if i == 0:
-                continue
-            pygame.draw.line(self.screen, Colors.YELLOW, self.skeleton_points[i], self.skeleton_points[i-1], width=2)
-
-        for i, p in enumerate(self.particles):
-            pygame.draw.circle(self.screen, self.particle_colors[i], p, 1)
-
-        for projectile in self.projectiles:
-            projectile.render()
