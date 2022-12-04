@@ -7,10 +7,6 @@ from utils import map_value_to_interval, radians
 from window import Window
 from typing import List
 
-SCREEN_X = 1000
-SCREEN_Y = 1000
-MIN_BOOST_ACCELERATION_TIME = 15
-
 
 class SpaceShip:
     def __init__(self, screen):
@@ -226,7 +222,7 @@ class SpaceShip:
             x, y = self.move_point(p[0], p[1], self.direction[0], self.direction[1])
             mps.append((x, y))
 
-        new_c, new_point_lists = Window.translate_over_edge((cx, cy), [sps, mps], buffer=20)
+        new_c, new_point_lists = Window.translate_over_edge(self.config, (cx, cy), [sps, mps], buffer=20)
         self.position = new_c
         self.skeleton_points = new_point_lists[0]
         self.misile_points = new_point_lists[1]

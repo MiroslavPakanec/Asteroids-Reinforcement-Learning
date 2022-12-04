@@ -27,6 +27,7 @@ class Asteroid:
         self.rotation = random.uniform(min_rot, max_rot) * math.pi / 180
         self.missile_push_factor = config['asteroid']['missile_push_factor']
         self.missile_rotation_factor = config['asteroid']['missile_rotation_factor']
+        self.config = config
 
     def rotate_point(self, center, point, angle):
         new_x = math.cos(angle) * (point[0]-center[0]) - math.sin(angle) * (point[1]-center[1]) + center[0]
@@ -45,7 +46,7 @@ class Asteroid:
             np = self.rotate_point(center=self.position, point=np, angle=self.rotation)
             new_points.append(np)
 
-        new_center_point, new_points_lst = Window.translate_over_edge(new_center_point, [new_points], buffer=50)
+        new_center_point, new_points_lst = Window.translate_over_edge(self.config, new_center_point, [new_points], buffer=50)
         self.position = new_center_point
         self.points = new_points_lst[0]
 

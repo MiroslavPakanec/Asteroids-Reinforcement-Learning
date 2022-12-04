@@ -1,6 +1,3 @@
-SCREEN_X = 1000
-SCREEN_Y = 1000
-
 class Window:
     @staticmethod
     def is_point_in_window(point, len_x, len_y):
@@ -36,9 +33,11 @@ class Window:
         return target_center, new_points_lists
 
     @staticmethod
-    def translate_over_edge(center, points_lsts, buffer):
+    def translate_over_edge(config, center, points_lsts, buffer):
+        screen_x = config['screen']['x']
+        screen_y = config['screen']['y']
         min_x, min_y = 0 - buffer, 0 - buffer
-        max_x, max_y = SCREEN_X + buffer, SCREEN_Y + buffer
+        max_x, max_y = screen_x + buffer, screen_y + buffer
         if (center[1] < min_y):
             p_trans_func = lambda c, p: (p[0], max_y - (c[1] - p[1]))
             c_trans_func = lambda c: (c[0], max_y)

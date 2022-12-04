@@ -1,5 +1,5 @@
 class Colors:
-    BACKGROUND = (30,30,30)
+    BACKGROUND = (10,30,30)
     PROJECTILE = (232, 82, 18)
     RED = (255,0,0)
     GREEN = (0,255,0)
