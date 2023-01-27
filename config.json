@@ -1,13 +1,13 @@
 {
     "screen": {
-        "x": 500,
-        "y": 500
+        "x": 1000,
+        "y": 1000
     },
     "ship": {
         "x": 20,
         "y": 20,
-        "spawn_x": 250,
-        "spawn_y": 250,
+        "spawn_x": 500,
+        "spawn_y": 500,
         "rotation_factor": 3,
         "speed_factor": 0.06,
         "speed_factor_boost": 0.24,
@@ -25,7 +25,7 @@
         "speed_factor": 0.00001,
         "missile_push_factor": 0.1,
         "missile_rotation_factor": 0.001,
-        "limit": 20,
+        "limit": 5,
         "respawn_frequency_ms": 5000
     },
     "projectile": {

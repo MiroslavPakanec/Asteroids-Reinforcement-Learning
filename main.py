@@ -6,7 +6,7 @@ from colors import Colors
 from game_objects.ship import SpaceShip
 from controllers.asteroid_controller import AsteroidController
 from controllers.colision_controller import ColisionController
-from ml.state_controller import process_state
+from ml.state_controller import get_state
 
 FPS = 60
 
@@ -63,17 +63,15 @@ def main():
             handle_exit_events()
             score, last_score, ticks = handle_reset_event(score, last_score, ticks, ship, asteroid_controller, hit)
 
-            pxarray = pygame.surfarray.array2d(screen)
-            process_state(pxarray)
-
-
-
             ship.step()
             asteroid_controller.step()
             ticks += 1
 
             score += ColisionController.check_asteroid_projectile(asteroid_controller, ship)
             hit = ColisionController.check_asteroid_ship(asteroid_controller, ship)
+            state = get_state(ship, asteroid_controller, config)
+
+            print(state.shape)
 
             ship.render()
             asteroid_controller.render()
@@ -92,4 +90,4 @@ def main():
     
 
 if __name__ == '__main__':
-    main()
+    main()  

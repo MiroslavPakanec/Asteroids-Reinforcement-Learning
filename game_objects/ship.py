@@ -1,3 +1,4 @@
+import sys
 import math
 import random
 import pygame
@@ -20,6 +21,8 @@ class SpaceShip:
         self.set_shooting()
         self.rotate_ship()
         self.set_particles()
+        self.set_sensors()
+
         for i,projectile in enumerate(self.projectiles):
             if (Window.is_point_off_window(projectile.position, self.screen_x, self.screen_y)):
                 self.projectiles.pop(i)
@@ -51,6 +54,18 @@ class SpaceShip:
             pygame.draw.circle(self.screen, self.particle_colors[i], p, 1)
         for projectile in self.projectiles:
             projectile.render()
+
+
+    def set_sensors(self):
+        d = math.sqrt(self.screen_x**2 + self.screen_y ** 2)
+        px, py = self.position
+        sx, sy = px, py - d
+
+        self.sensors = []
+        for i in range(0, 360, 10):
+            alpha = radians(i)
+            tx, ty = self.rotate_point(sx, sy, px, py, math.sin(alpha), math.cos(alpha))
+            self.sensors.append((tx, ty))
 
     def init_config(self, config):
         self.screen_x = config['screen']['x']
