@@ -16,13 +16,13 @@ class ColisionController:
             
     @staticmethod
     def check_asteroid_projectile(ac: AsteroidController, ship: SpaceShip):
-        score_inc = 0
+        no_colisions = 0
         for ai,asteroid in enumerate(ac.asteroids):
             polygon = Polygon(asteroid.points)
             for pi, projectile in enumerate(ship.projectiles):
                 projectile_point = Point(projectile.position[0],projectile.position[1])
                 if polygon.contains(projectile_point):
-                    score_inc += 1
+                    no_colisions += 1
                     ship.projectiles.pop(pi)
                     
                     destroyed = asteroid.hit()
@@ -35,4 +35,4 @@ class ColisionController:
                             continue
                         ac.generate_asteroid(level, position, dir_A, speed)
                         ac.generate_asteroid(level, position, dir_B, speed)
-        return score_inc
+        return no_colisions

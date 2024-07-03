@@ -15,7 +15,7 @@
         "speed_particle_renders_boost": 20,
         "speed_particle_spread_degrees": 30,
         "speed_particle_spread_degrees_boost": 10,
-        "shooting_frequiency": 125
+        "shooting_frequiency": 6
     },
     "asteroid": {
         "min_rotation_radians": 0.1,
@@ -25,8 +25,8 @@
         "speed_factor": 0.00001,
         "missile_push_factor": 0.1,
         "missile_rotation_factor": 0.001,
-        "limit": 5,
-        "respawn_frequency_ms": 5000
+        "limit": 10,
+        "respawn_frequency_ticks": 300
     },
     "projectile": {
         "speed_factor": 1 

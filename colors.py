@@ -6,3 +6,4 @@ class Colors:
     BLUE = (0,0,255)
     YELLOW = (255,255,0)
     PINK = (140, 24, 115)
+    SENSORS = (5,15,15)

@@ -10,18 +10,21 @@ from typing import List
 
 
 class SpaceShip:
-    def __init__(self, screen):
+    def __init__(self, screen, config):
         self.screen = screen
+        self.init_config(config)
+        self.init_sensors()
+        self.reset()
 
-    def step(self):
-        self.set_boost()
-        self.set_rotation()
-        self.set_direction()
+    def step(self, move, ticks):
+        self.set_boost(move)
+        self.set_rotation(move)
+        self.set_direction(move)
         self.set_position()
-        self.set_shooting()
+        self.set_shooting(move, ticks)
         self.rotate_ship()
-        self.set_particles()
-        self.set_sensors()
+        self.set_particles(move)
+        self.init_sensors()
 
         for i,projectile in enumerate(self.projectiles):
             if (Window.is_point_off_window(projectile.position, self.screen_x, self.screen_y)):
@@ -29,8 +32,8 @@ class SpaceShip:
             else:
                 projectile.step()
 
-    def reset(self, config):
-        self.init_config(config)
+    def reset(self):
+        self.position = self.spawn_x, self.spawn_y
         self.direction = 0, 0
         self.rotation = 0
         self.total_rotation = self.rotation
@@ -54,11 +57,13 @@ class SpaceShip:
             pygame.draw.circle(self.screen, self.particle_colors[i], p, 1)
         for projectile in self.projectiles:
             projectile.render()
+        # for sensor in self.sensors:
+        #     pygame.draw.line(self.screen, Colors.SENSORS, self.position, sensor)
 
 
-    def set_sensors(self):
+    def init_sensors(self):
         d = math.sqrt(self.screen_x**2 + self.screen_y ** 2)
-        px, py = self.position
+        px, py = self.spawn_x, self.spawn_y
         sx, sy = px, py - d
 
         self.sensors = []
@@ -76,7 +81,8 @@ class SpaceShip:
         self.rotation_factor = config['ship']['rotation_factor']
         self.speed_factor = config['ship']['speed_factor']
         self.speed_factor_boost = config['ship']['speed_factor_boost']
-        self.position = config['ship']['spawn_x'], config['ship']['spawn_y']
+        self.spawn_x = config['ship']['spawn_x']
+        self.spawn_y = config['ship']['spawn_y']
         self.speed_particle_renders = config['ship']['speed_particle_renders']
         self.speed_particle_renders_boost = config['ship']['speed_particle_renders_boost']
         self.speed_particle_spread_degrees = config['ship']['speed_particle_spread_degrees']
@@ -100,11 +106,9 @@ class SpaceShip:
         rt = self.position[0] + self.w / 4, self.position[1] - self.h / 2
         return [lb, rb, lt, rt]
 
-    def set_shooting(self):
-        keys = pygame.key.get_pressed()
-        current_time = pygame.time.get_ticks()
-        if keys[pygame.K_LCTRL] and current_time > self.last_shooting_time + self.shooting_freq:
-            self.last_shooting_time = current_time
+    def set_shooting(self, actions, ticks):
+        if actions[4] == 1 and ticks > self.last_shooting_time + self.shooting_freq:
+            self.last_shooting_time = ticks
             lb, rb, lt, rt = self.get_missile_points()
             a = radians(self.total_rotation)
             cx, cy = self.position
@@ -118,22 +122,26 @@ class SpaceShip:
             self.projectiles.append(projectile_left)
             self.projectiles.append(projectile_right)
 
-    def set_rotation(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
+    def set_rotation(self, actions):
+        # keys = pygame.key.get_pressed()
+        if actions[2] == 1:
+        # if keys[pygame.K_a]:
             self.rotation -= 1 * self.rotation_factor
             self.total_rotation -= 1 * self.rotation_factor
-        if keys[pygame.K_d]:
+        if actions[1] == 1:
+        # if keys[pygame.K_d]:
             self.rotation += 1 * self.rotation_factor
             self.total_rotation += 1 * self.rotation_factor
 
-    def set_boost(self):
-        keys = pygame.key.get_pressed()
-        self.boost = True if keys[pygame.K_SPACE] else False
+    def set_boost(self, actions):
+        # keys = pygame.key.get_pressed()
+        self.boost = True if actions[3] == 1 else False
+        # self.boost = True if keys[pygame.K_SPACE] else False
 
-    def set_particles(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
+    def set_particles(self, actions):
+        # keys = pygame.key.get_pressed()
+        if actions[0] == 1:
+        # if keys[pygame.K_w]:
             self. add_particles()
         self.clear_particles()
 
@@ -192,7 +200,7 @@ class SpaceShip:
             self.misile_points[i] = self.rotate_point(p[0], p[1], cx, cy, sin, cos)
         self.rotation = 0
 
-    def set_direction(self):
+    def set_direction(self, actions):
         keys = pygame.key.get_pressed()
         dx, dy = self.direction
         dx_inc, dy_inc = 0, 0
@@ -216,7 +224,8 @@ class SpaceShip:
             x_from, x_to = -1, 0
             y_from, y_to = 0, -1
 
-        if keys[pygame.K_w]:
+        if actions[0] == 1:
+        # if keys[pygame.K_w]:
             dx_inc = map_value_to_interval(rel_rot, r_from, r_to, x_from, x_to)
             dy_inc = map_value_to_interval(rel_rot, r_from, r_to, y_from, y_to)
 

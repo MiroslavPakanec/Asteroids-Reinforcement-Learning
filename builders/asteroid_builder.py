@@ -8,7 +8,7 @@ class AsteroidBuilder:
     @staticmethod
     def generate_asteroid(screen, config, level: int, position=None, direction=None, speed=None):
         size = level * 10
-        points, position, direction = np.array(AsteroidBuilder.generate_asteroid_points(config, size, position, direction))
+        points, position, direction = AsteroidBuilder.generate_asteroid_points(config, size, position, direction)
         hull = ConvexHull(points)
         corners = []
         for v in hull.vertices:

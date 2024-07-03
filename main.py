@@ -1,4 +1,6 @@
+import sys
 import json
+import torch
 import pygame
 import traceback
 
@@ -9,7 +11,6 @@ from controllers.colision_controller import ColisionController
 from ml.state_controller import get_state
 
 FPS = 60
-
 
 def initialize(config):
     pygame.init()
@@ -37,11 +38,20 @@ def handle_reset_event(score: int, last_score: int, ticks: int, ship: SpaceShip,
     keys = pygame.key.get_pressed()
     if keys[pygame.K_p] or ticks == 0 or hit:
         config = load_config()
-        ship.reset(config)
-        asteroid_controller.reset(config)
+        ship.reset()
+        asteroid_controller.reset()
         return 0, score, 0
     return score, last_score, ticks
 
+def get_actions():
+    actions = [None, None, None, None, None] # [W, D, A, SPACE, CTRL]
+    keys = pygame.key.get_pressed()
+    actions[0] = 1 if keys[pygame.K_w] else 0
+    actions[1] = 1 if keys[pygame.K_d] else 0
+    actions[2] = 1 if keys[pygame.K_a] else 0
+    actions[3] = 1 if keys[pygame.K_SPACE] else 0
+    actions[4] = 1 if keys[pygame.K_LCTRL] else 0
+    return actions
 
 def main():
     config = load_config()
@@ -54,8 +64,8 @@ def main():
     hit = False
     
     try:
-        ship: SpaceShip = SpaceShip(screen)
-        asteroid_controller = AsteroidController(screen)
+        ship: SpaceShip = SpaceShip(screen, config)
+        asteroid_controller = AsteroidController(screen, config)
 
         while True:
             screen.fill(Colors.BACKGROUND)
@@ -63,15 +73,15 @@ def main():
             handle_exit_events()
             score, last_score, ticks = handle_reset_event(score, last_score, ticks, ship, asteroid_controller, hit)
 
-            ship.step()
-            asteroid_controller.step()
+            actions = get_actions()
+            ship.step(actions, ticks)
+            print(actions, end='\r')
+            asteroid_controller.step(tick=ticks)
             ticks += 1
 
             score += ColisionController.check_asteroid_projectile(asteroid_controller, ship)
             hit = ColisionController.check_asteroid_ship(asteroid_controller, ship)
             state = get_state(ship, asteroid_controller, config)
-
-            print(state.shape)
 
             ship.render()
             asteroid_controller.render()
