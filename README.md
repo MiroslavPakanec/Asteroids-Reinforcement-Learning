@@ -1,7 +1,6 @@
 # Asteroids 
-<video width="800" controls>
-  <source src="documentation/example.mp4" type="video/mp4" >
-</video>
+
+<img src="documentation/example.gif" alt="drawing" width="700"/>
 
 ### Container Setup (windows):
 - Prerequisites:
