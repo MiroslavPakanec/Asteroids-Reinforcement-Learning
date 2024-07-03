@@ -1,2 +1,2 @@
 *.pyc
-models/*
+src/models/*

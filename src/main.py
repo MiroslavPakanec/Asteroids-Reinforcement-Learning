@@ -21,7 +21,7 @@ def initialize(config):
     return screen
 
 def load_config():
-    path = './config.json'
+    path = '/workspace/src/config.json'
     with open(path, 'r') as f:
         data = json.load(f)
     return data
@@ -57,7 +57,7 @@ def main():
     config = load_config()
     screen = initialize(config)   
     clock = pygame.time.Clock()
-    font = pygame.freetype.Font('./fonts/atari.ttf', 15)
+    font = pygame.freetype.Font('/workspace/src/fonts/atari.ttf', 15)
     ticks = 0
     score = 0
     last_score = 0
@@ -75,7 +75,6 @@ def main():
 
             actions = get_actions()
             ship.step(actions, ticks)
-            print(actions, end='\r')
             asteroid_controller.step(tick=ticks)
             ticks += 1
 
